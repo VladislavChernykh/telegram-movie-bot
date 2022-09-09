@@ -1,7 +1,7 @@
 {
   "name": "telebot-vercel",
   "version": "1.0.0",
-  "author": "PonomareVlad",
+  "author": "Vladislav Chernykh",
   "scripts": {
     "dev": "vc dev",
     "tunnel": "lt --port 3000 & vc dev"

@@ -4,9 +4,11 @@
   "author": "Vladislav Chernykh",
   "scripts": {
     "dev": "vc dev",
-    "tunnel": "lt --port 3000 & vc dev"
+    "tunnel": "lt --port 3000 & vc dev",
+    "start": "lt --port 3000"
   },
   "dependencies": {
+    "faunadb": "^4.6.0",
     "telebot": "latest"
   }
 }

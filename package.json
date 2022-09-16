@@ -3,9 +3,9 @@
   "version": "1.0.1",
   "author": "Vladislav Chernykh",
   "scripts": {
+    "start": "lt --port 3000",
     "dev": "vc dev",
-    "tunnel": "lt --port 3000 & vc dev",
-    "start": "lt --port 3000"
+    "tunnel": "lt --port 3000 & vc dev"
   },
   "dependencies": {
     "faunadb": "^4.6.0",

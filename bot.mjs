@@ -132,12 +132,11 @@ bot.on('/random', async msg => {
         Call(Fn("getAllUserMovies"), userId)
     )
     const allUserMovies = resp["data"]
-    const randomMovie = random_item(allUserMovies)
-    if (!randomMovie.length) {
+    if (!allUserMovies.length) {
         return bot.sendMessage(msg.from.id, "Ваш список фильмов пустой. Пополните его перед тем как выбирать случайный");
     }
 
-    return bot.sendMessage(msg.from.id, randomMovie);
+    return bot.sendMessage(msg.from.id, random_item(allUserMovies));
 });
 
 bot.on('/env', (msg) => msg.reply.text(process.env.VERCEL_ENV));

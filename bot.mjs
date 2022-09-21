@@ -1,5 +1,21 @@
 import fauna_db_pkg from 'faunadb';
-const { Client, Collection, Get, Ref, Index, Match, Paginate } = fauna_db_pkg;
+const {
+    Client,
+    Collection,
+    Collections,
+    Get,
+    Ref,
+    Index,
+    Match,
+    Paginate,
+    Create,
+    Delete,
+    Map,
+    Lambda,
+    Var,
+    Function: Fn,
+    Call
+} = fauna_db_pkg;
 import TeleBot from "telebot"
 
 const bot = new TeleBot(process.env.TELEGRAM_BOT_TOKEN)
@@ -39,90 +55,102 @@ async function getMovieFromKp(movieName) {
     }
 }
 
-bot.on('/start', msg => {
+function random_item(items) {
+    return items[Math.floor(Math.random() * items.length)];
+}
 
+bot.on('/start', msg => {
     let bot_action_description = `
 /start - начать работу бота
 /random - выбрать случайный фильм из моего списка
-/random_all - выбрать случайный фильм из всех фильмов в сервисе
+/all_my_movies - все мои фильмы
 /add *название фильма* - добавить фильм в мой список
 /remove *название фильма* - удалить фильм из моего списка
     `
 
     let replyMarkup = bot.keyboard([
-        ['/random', '/random_all'],
+        ['/random', "/all_my_movies"],
     ], { resize: true });
 
     return bot.sendMessage(msg.from.id, bot_action_description, { replyMarkup });
 });
 
-bot.on(/^\/add (.+)$/, (msg, props) => {
-    console.log(msg)
-    console.log(props)
-    const movie_name = props.match[1];
-    return bot.sendMessage(msg.from.id, `Фильм '${movie_name}' был добвален в список`);
+bot.on(/^\/add (.+)$/, async (msg, props) => {
+    let movie_name = props.match[1];
+    const userId = msg.from.id
+    if (!movie_name) {
+        console.log("empty movie name")
+        return
+    }
+
+    movie_name = movie_name.trim()
+    const resp = await faunadbClient.query(
+        Create(
+            Collection("movies"),
+            {
+                data: { name: movie_name, userId: userId }
+            }
+        )
+    )
+    console.log(JSON.stringify(resp))
+
+    return bot.sendMessage(msg.from.id, `Фильм '${movie_name}' был добавлен в список`);
 });
 
-bot.on(/^\/remove (.+)$/, (msg, props) => {
-    console.log(msg)
-    console.log(props)
-    const movie_name = props.match[1];
+bot.on(/^\/remove (.+)$/, async (msg, props) => {
+    let movie_name = props.match[1];
+    const userId = msg.from.id
+    if (!movie_name) {
+        console.log("empty movie name")
+        return
+    }
+
+    movie_name = movie_name.trim()
+
+    const resp = await faunadbClient.query(
+        Map(
+            Paginate(
+                Match(Index("movies_by_userId_and_name"),
+                    [movie_name, userId]
+                )
+            ),
+            Lambda("X", Delete(Var("X")))
+        )
+    )
+    console.log(JSON.stringify(resp))
+
+    if (!resp["data"].length) {
+        return bot.sendMessage(msg.from.id, `Фильма '${movie_name}' нет в списке для удаления`);
+    }
+
     return bot.sendMessage(msg.from.id, `Фильм '${movie_name}' был удалён из списка`);
 });
 
-bot.on('/random', msg => {
+bot.on('/random', async msg => {
+    const userId = msg.from.id
+    const resp = await faunadbClient.query(
+        Call(Fn("getAllUserMovies"), userId)
+    )
+    const allUserMovies = resp["data"]
+    const randomMovie = random_item(allUserMovies)
+    if (!randomMovie.length) {
+        return bot.sendMessage(msg.from.id, "Ваш список фильмов пустой. Пополните его перед тем как выбирать случайный");
+    }
 
-    return bot.sendMessage(msg.from.id, 'Случайный фильм');
+    return bot.sendMessage(msg.from.id, randomMovie);
 });
-
-bot.on('/random_all', msg => {
-
-    return bot.sendMessage(msg.from.id, 'Случайный фильм из всей коллекции.');
-});
-
-
-bot.on('text', msg => msg.text.startsWith("/") ? null : msg.reply.text(msg.text))
-
-bot.on('/start1', (msg) => msg.reply.photo("https://picsum.photos/1000"));
 
 bot.on('/env', (msg) => msg.reply.text(process.env.VERCEL_ENV));
 
-bot.on('/ttt', (msg) => bot.sendMessage(msg.from.id, "Hi!",
-    {
-        replyMarkup: {
-            inline_keyboard: [
-                [{ "text": "Click me", callback_data: "one" }]
-            ]
-        }
-    }));
-
-bot.on(/^\/say (.+)$/, (msg, props) => {
-    console.log(msg)
-    console.log(props)
-    const text = props.match[1];
-    return bot.sendMessage(msg.from.id, text, { replyToMessage: msg.message_id });
-});
-
-bot.on(/^\/all_movies_by_id (.+)$/, async (msg) => {
-    console.log(msg)
-    const userId = msg.message.from.id
-    console.log(userId)
+bot.on("/all_my_movies", async (msg) => {
+    const userId = msg.from.id
     const resp = await faunadbClient.query(
-        // Get(
-        //     Ref(
-        //         Collection("movies"),
-        //         "342767518987846219"
-        //     )
-        // )
-        Paginate(
-            Match(
-                Index("movies_by_userId"), userId)
-        )
+        Call(Fn("getAllUserMovies"), userId)
     )
-    const all_movies = resp["data"]
-    console.log(JSON.stringify(all_movies))
+    const allUserMovies = resp["data"]
+    console.log(JSON.stringify(allUserMovies))
 
-    return bot.sendMessage(msg.from.id, JSON.stringify(all_movies));
+    return bot.sendMessage(msg.from.id, JSON.stringify(allUserMovies));
 })
 
 

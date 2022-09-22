@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "faunadb": "^4.6.0",
+    "node-fetch": "^3.2.10",
     "telebot": "latest"
   }
 }

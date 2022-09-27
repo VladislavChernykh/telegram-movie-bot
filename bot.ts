@@ -81,7 +81,7 @@ function generateMessage(movieData: MovieData[]): string[] {
         `
         movieIndex++
         elementIndex++
-        if (elementIndex > 5) {
+        if (elementIndex > 4) {
             messages.push(messageReply)
             messageReply = ""
             elementIndex = 0
@@ -203,8 +203,8 @@ async function getMovieData(randomMovie: string): Promise<[MovieData[], number]>
     console.log("Movie data")
     console.log(movieData)
 
-    if (movieData && movieData.length > 15) {
-        movieData = movieData.slice(15)
+    if (movieData && movieData.length > 16) {
+        movieData = movieData.slice(16)
         console.log(`The results were trancated. Actual number of results: ${movieData.length}`)
     }
 

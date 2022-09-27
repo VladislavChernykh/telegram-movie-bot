@@ -1,7 +1,8 @@
 {
   "name": "telebot-vercel",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "author": "Vladislav Chernykh",
+  "type": "module",
   "scripts": {
     "start": "lt --port 3000",
     "dev": "vc dev",
@@ -9,7 +10,13 @@
   },
   "dependencies": {
     "faunadb": "^4.6.0",
-    "node-fetch": "^3.2.10",
-    "telebot": "latest"
+    "node-fetch": "^2.6.1",
+    "telebot": "latest",
+    "typescript": "^4.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^18.7.18",
+    "@types/node-fetch": "^2.6.1",
+    "@types/telebot": "^1.2.4"
   }
 }

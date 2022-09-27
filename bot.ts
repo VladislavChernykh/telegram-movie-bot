@@ -65,6 +65,10 @@ function generateMessage(movieData: MovieData[]): string[] {
     let elementIndex = 1
     let messages: string[] = []
 
+    if (!movieData) {
+        return []
+    }
+
     for (let m of movieData) {
         messageReply += `
 *${movieIndex}*: ${m.name} / ${m.eng_name}
@@ -191,7 +195,7 @@ async function getMovieData(randomMovie: string): Promise<[MovieData[], number]>
         console.log(`WARN: Maybe no KP data. Error occured: ${e}`)
     }
 
-    if (!movieData.length) {
+    if (!movieData) {
         console.log("Fetch data from KP")
         movieData = await getMoviesFromKp(randomMovie)
     }
@@ -199,7 +203,7 @@ async function getMovieData(randomMovie: string): Promise<[MovieData[], number]>
     console.log("Movie data")
     console.log(movieData)
 
-    if (movieData.length > 15) {
+    if (movieData && movieData.length > 15) {
         movieData = movieData.slice(15)
         console.log(`The results were trancated. Actual number of results: ${movieData.length}`)
     }
@@ -232,7 +236,7 @@ bot.on('/random', async msg => {
     }
 
     // Update the info
-    if (movieRef) {
+    if (movieRef && movieData) {
         console.log(`movie ref ${movieRef}`)
         await faunadbClient.query(
             Update(

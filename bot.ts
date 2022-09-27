@@ -191,7 +191,7 @@ async function getMovieData(randomMovie: string): Promise<[MovieData[], number]>
         console.log(`WARN: Maybe no KP data. Error occured: ${e}`)
     }
 
-    if (!movieData) {
+    if (!movieData.length) {
         console.log("Fetch data from KP")
         movieData = await getMoviesFromKp(randomMovie)
     }

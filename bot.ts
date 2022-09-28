@@ -141,7 +141,7 @@ bot.on(/^\/add (.+)$/, async (msg, props) => {
     return bot.sendMessage(msg.from.id, `Фильм '${movie_name}' был добавлен в список`);
 });
 
-bot.on(/^\/remove (.+)$/, async (msg, props) => {
+bot.on(/^\/rm (.+)$/, async (msg, props) => {
     let movie_name = props.match[1];
     const userId = msg.from.id
     if (!movie_name) {

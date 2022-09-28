@@ -1,12 +1,12 @@
 import * as fauna_db_pkg from 'faunadb';
-import fetch from 'node-fetch'
+import fetch from 'node-fetch';
+import TeleBot from "telebot";
+import { KpInfo, KpResponse, MovieData } from './utils/models';
+import { getKpLink, random_item } from './utils/utils';
 
 const {
     Client,
     Collection,
-    Collections,
-    Get,
-    Ref,
     Index,
     Match,
     Paginate,
@@ -17,20 +17,16 @@ const {
     Var,
     Function: Fn,
     Call,
-    Select,
     Update,
 } = fauna_db_pkg;
-import TeleBot from "telebot"
-import { KpInfo, KpResponse, MovieData } from './utils/models';
-import { getKpLink, random_item } from './utils/utils';
 
 const bot = new TeleBot(process.env.TELEGRAM_BOT_TOKEN)
 const faunadbClient = new Client({ secret: process.env.FAUNA_SERVER_TOKEN })
 
-async function getMoviesFromKp(movieName: string): Promise<MovieData[]> {
-    const url = `https://api.kinopoisk.dev/movie?token=${process.env.KP_API_TOKEN}&search=${movieName}&field=name&isStrict=false`
+async function getMoviesFromKp(movieName: string, field: string = "name"): Promise<MovieData[]> {
+    const url = `https://api.kinopoisk.dev/movie?token=${process.env.KP_API_TOKEN}&search=${movieName}&field=${field}&isStrict=false&sortField=votes.imdb&sortType=-1`
     try {
-        let response = await fetch(url);
+        const response = await fetch(url);
         if (response.status != 200) {
             console.log(`Unseccessful request with code ${response.status}`)
         }
@@ -43,16 +39,18 @@ async function getMoviesFromKp(movieName: string): Promise<MovieData[]> {
             return
         }
 
-        return data.docs.map(movie => ({
-            "name": movie.name,
-            "year": movie.year,
-            "length": movie.movieLength || 0,
-            "eng_name": movie.alternativeName || "",
-            "kp_rating": movie.rating.kp || 0,
-            "imdb_rating": movie.rating.imdb || 0,
-            "description": movie.description || "",
-            "movie_kp_url": getKpLink(movie.type, movie.id)
-        }))
+        return data.docs
+            .filter(m => m.year)
+            .map(movie => ({
+                "name": movie.name,
+                "year": movie.year,
+                "length": movie.movieLength || 0,
+                "eng_name": movie.alternativeName || "",
+                "kp_rating": movie.rating.kp || 0,
+                "imdb_rating": movie.rating.imdb || 0,
+                "description": movie.description || "",
+                "movie_kp_url": getKpLink(movie.type, movie.id)
+            }))
 
     } catch (error) {
         console.log(error)
@@ -92,6 +90,14 @@ function generateMessage(movieData: MovieData[]): string[] {
     return messages
 }
 
+async function getAllUserMovies(msg: any): Promise<string[]> {
+    const userId = msg.from.id
+    const resp = await faunadbClient.query(
+        Call(Fn("getAllUserMovies"), userId)
+    )
+    return resp["data"]
+}
+
 bot.on('/start', msg => {
     let bot_action_description = `
 /start - начать работу бота
@@ -117,6 +123,12 @@ bot.on(/^\/add (.+)$/, async (msg, props) => {
     }
 
     movie_name = movie_name.trim()
+    const allUserMovies = await getAllUserMovies(msg)
+
+    if (allUserMovies.includes(movie_name)) {
+        return bot.sendMessage(msg.from.id, `Фильм '${movie_name}' уже есть в вашем списке`);
+    }
+
     const resp = await faunadbClient.query(
         Create(
             Collection("movies"),
@@ -125,7 +137,6 @@ bot.on(/^\/add (.+)$/, async (msg, props) => {
             }
         )
     )
-    console.log(JSON.stringify(resp))
 
     return bot.sendMessage(msg.from.id, `Фильм '${movie_name}' был добавлен в список`);
 });
@@ -150,7 +161,6 @@ bot.on(/^\/remove (.+)$/, async (msg, props) => {
             Lambda("X", Delete(Var("X")))
         )
     )
-    console.log(JSON.stringify(resp))
 
     if (!resp["data"].length) {
         return bot.sendMessage(msg.from.id, `Фильма '${movie_name}' нет в списке для удаления`);
@@ -162,14 +172,15 @@ bot.on(/^\/remove (.+)$/, async (msg, props) => {
 bot.on('/env', (msg) => msg.reply.text(process.env.VERCEL_ENV));
 
 bot.on("/all_my_movies", async (msg) => {
-    const userId = msg.from.id
-    const resp = await faunadbClient.query(
-        Call(Fn("getAllUserMovies"), userId)
-    )
-    const allUserMovies = resp["data"]
-    console.log(JSON.stringify(allUserMovies))
+    const allUserMovies = await getAllUserMovies(msg)
+    let movieCounter = 1
+    let allMoviesList = ""
+    for (let m of allUserMovies) {
+        allMoviesList += `${movieCounter}. ${m}\n`
+        movieCounter++
+    }
 
-    return bot.sendMessage(msg.from.id, JSON.stringify(allUserMovies));
+    return bot.sendMessage(msg.from.id, allMoviesList);
 })
 
 async function getMovieData(randomMovie: string): Promise<[MovieData[], number]> {
@@ -213,11 +224,7 @@ async function getMovieData(randomMovie: string): Promise<[MovieData[], number]>
 
 
 bot.on('/random', async msg => {
-    const userId = msg.from.id
-    const resp = await faunadbClient.query(
-        Call(Fn("getAllUserMovies"), userId)
-    )
-    const allUserMovies: string[] = resp["data"]
+    const allUserMovies = await getAllUserMovies(msg)
     if (!allUserMovies.length) {
         return bot.sendMessage(msg.from.id, "Ваш список фильмов пустой. Пополните его перед тем, как выбирать случайный");
     }

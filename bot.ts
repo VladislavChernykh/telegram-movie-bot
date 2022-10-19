@@ -22,6 +22,7 @@ const {
 
 const bot = new TeleBot(process.env.TELEGRAM_BOT_TOKEN)
 const faunadbClient = new Client({ secret: process.env.FAUNA_SERVER_TOKEN })
+const MAX_ELEMENTS_PER_REQUESTS = process.env.MAX_ELEMENTS_PER_REQUESTS || 4
 
 async function getMoviesFromKp(movieName: string, field: string = "name"): Promise<MovieData[]> {
     const url = `https://api.kinopoisk.dev/movie?token=${process.env.KP_API_TOKEN}&search=${movieName}&field=${field}&isStrict=false&sortField=votes.imdb&sortType=-1`
@@ -74,12 +75,11 @@ function generateMessage(movieData: MovieData[]): string[] {
 *Год*: ${m.year}
 *Рейтинг*: IMDB ${m.imdb_rating}, Кинопоиск ${m.kp_rating}
 *Описание*: ${m.description}
-*Ссылка на Кинопоиск*: ${m.movie_kp_url}
-
+*Ссылка на Кинопоиск*: ${m.movie_kp_url}\n
         `
         movieIndex++
         elementIndex++
-        if (elementIndex > 4) {
+        if (elementIndex > MAX_ELEMENTS_PER_REQUESTS) {
             messages.push(messageReply)
             messageReply = ""
             elementIndex = 0
@@ -118,7 +118,7 @@ bot.on(/^\/add (.+)$/, async (msg, props) => {
     let movie_name = props.match[1];
     const userId = msg.from.id
     if (!movie_name) {
-        console.log("empty movie name")
+        console.log("Empty movie name")
         return
     }
 
@@ -195,8 +195,7 @@ async function getMovieData(randomMovie: string): Promise<[MovieData[], number]>
         let kp_response: KpInfo = await faunadbClient.query(
             Call(Fn("getMovieKp"), randomMovie)
         )
-        console.log("KP response")
-        console.log(JSON.stringify(kp_response))
+        console.log("KP response: " + JSON.stringify(kp_response))
         if (kp_response.kp) {
             movieData = kp_response.kp
         } else {
@@ -211,9 +210,7 @@ async function getMovieData(randomMovie: string): Promise<[MovieData[], number]>
         movieData = await getMoviesFromKp(randomMovie)
     }
 
-    console.log("Movie data")
-    console.log(movieData)
-
+    console.log("Movie data:" + movieData)
     if (movieData && movieData.length > 16) {
         movieData = movieData.slice(16)
         console.log(`The results were trancated. Actual number of results: ${movieData.length}`)

@@ -1,6 +1,6 @@
 {
   "name": "telebot-vercel",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "author": "Vladislav Chernykh",
   "type": "module",
   "scripts": {

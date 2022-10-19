@@ -76,7 +76,7 @@ function generateMessage(movieData: MovieData[]): string[] {
 *Рейтинг*: IMDB ${m.imdb_rating}, Кинопоиск ${m.kp_rating}
 *Описание*: ${m.description}
 *Ссылка на Кинопоиск*: ${m.movie_kp_url}\n
-        `
+`
         movieIndex++
         elementIndex++
         if (elementIndex > MAX_ELEMENTS_PER_REQUESTS) {

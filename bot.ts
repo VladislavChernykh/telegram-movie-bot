@@ -75,7 +75,7 @@ function generateMessage(movieData: MovieData[]): string[] {
 *Год*: ${m.year}
 *Рейтинг*: IMDB ${m.imdb_rating}, Кинопоиск ${m.kp_rating}
 *Описание*: ${m.description}
-*Ссылка на Кинопоиск*: ${m.movie_kp_url}\n
+*Ссылка на Кинопоиск*: ${m.movie_kp_url}
 `
         movieIndex++
         elementIndex++
